@@ -439,7 +439,8 @@ struct setup_revision_opt {
 	void (*tweak)(struct rev_info *);
 	unsigned int	assume_dashdash:1,
 			allow_exclude_promisor_objects:1,
-			free_removed_argv_elements:1;
+			free_removed_argv_elements:1,
+			nul_delim_stdin:1;
 	unsigned revarg_opt;
 };
 int setup_revisions(int argc, const char **argv, struct rev_info *revs,
