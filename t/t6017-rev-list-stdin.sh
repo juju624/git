@@ -148,4 +148,13 @@ test_expect_success '--not via stdin does not influence revisions from command l
 	test_cmp expect actual
 '
 
+test_expect_success 'NUL-delimited stdin' '
+	printf "%s\0%s\0%s\0" "HEAD" "--" "file-1" > input &&
+
+	git rev-list -z --objects HEAD -- file-1 >expect &&
+	git rev-list -z --objects --stdin <input >actual &&
+
+	test_cmp expect actual
+'
+
 test_done
