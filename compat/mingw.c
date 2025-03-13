@@ -560,7 +560,7 @@ static int mingw_open_existing(const wchar_t *filename, int oflags, ...)
 	int fd;
 
 	/* We only support basic flags. */
-	if (oflags & ~(O_ACCMODE | O_NOINHERIT)) {
+	if (oflags & ~(O_ACCMODE | O_NOINHERIT | O_CLOEXEC)) {
 		errno = ENOSYS;
 		return -1;
 	}
@@ -632,7 +632,7 @@ int mingw_open (const char *filename, int oflags, ...)
 
 	if ((oflags & O_APPEND) && !is_local_named_pipe_path(filename))
 		open_fn = mingw_open_append;
-	else if (!(oflags & ~(O_ACCMODE | O_NOINHERIT)))
+	else if (!(oflags & ~(O_ACCMODE | O_NOINHERIT | O_CLOEXEC)))
 		open_fn = mingw_open_existing;
 	else
 		open_fn = _wopen;
