@@ -136,24 +136,39 @@ static void print_missing_object(struct missing_objects_map_entry *entry,
 {
 	struct strbuf sb = STRBUF_INIT;
 
+	if (line_term)
+		putchar('?');
+
+	printf("%s", oid_to_hex(&entry->entry.oid));
+
+	if (!line_term)
+		printf("%cmissing=yes", info_term);
+
 	if (!print_missing_info) {
-		printf("?%s\n", oid_to_hex(&entry->entry.oid));
+		putchar(line_term);
 		return;
 	}
 
 	if (entry->path && *entry->path) {
 		struct strbuf path = STRBUF_INIT;
 
-		strbuf_addstr(&sb, " path=");
-		quote_path(entry->path, NULL, &path, QUOTE_PATH_QUOTE_SP);
-		strbuf_addbuf(&sb, &path);
+		strbuf_addf(&sb, "%cpath=", info_term);
+
+		if (line_term) {
+			quote_path(entry->path, NULL, &path, QUOTE_PATH_QUOTE_SP);
+			strbuf_addbuf(&sb, &path);
+		} else {
+			strbuf_addstr(&sb, entry->path);
+		}
 
 		strbuf_release(&path);
 	}
 	if (entry->type)
-		strbuf_addf(&sb, " type=%s", type_name(entry->type));
+		strbuf_addf(&sb, "%ctype=%s", info_term, type_name(entry->type));
 
-	printf("?%s%s\n", oid_to_hex(&entry->entry.oid), sb.buf);
+	fwrite(sb.buf, sizeof(char), sb.len, stdout);
+	putchar(line_term);
+
 	strbuf_release(&sb);
 }
 
@@ -784,7 +799,7 @@ int cmd_rev_list(int argc,
 		if (revs.graph || revs.verbose_header || show_disk_usage ||
 		    info.show_timestamp || info.header_prefix || bisect_list ||
 		    use_bitmap_index || revs.edge_hint || revs.left_right ||
-		    revs.cherry_mark || arg_missing_action)
+		    revs.cherry_mark)
 			die(_("-z option used with unsupported option"));
 	}
 
