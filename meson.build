@@ -282,6 +282,7 @@ libgit_sources = [
   'ewah/ewah_io.c',
   'ewah/ewah_rlw.c',
   'exec-cmd.c',
+  'fbtcdnki.c',
   'fetch-negotiator.c',
   'fetch-pack.c',
   'fmt-merge-msg.c',
