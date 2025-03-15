@@ -563,7 +563,7 @@ static int mingw_open_existing(const wchar_t *filename, int oflags, ...)
 	int fd;
 
 	/* We only support basic flags. */
-	if (oflags & ~(O_ACCMODE | O_NOINHERIT)) {
+	if (oflags & ~(O_ACCMODE | O_NOINHERIT | O_CLOEXEC)) {
 		errno = ENOSYS;
 		return -1;
 	}
@@ -635,7 +635,7 @@ int mingw_open (const char *filename, int oflags, ...)
 
 	if ((oflags & O_APPEND) && !is_local_named_pipe_path(filename))
 		open_fn = mingw_open_append;
-	else if (!(oflags & ~(O_ACCMODE | O_NOINHERIT)))
+	else if (!(oflags & ~(O_ACCMODE | O_NOINHERIT | O_CLOEXEC)))
 		open_fn = mingw_open_existing;
 	else
 		open_fn = _wopen;
@@ -647,6 +647,19 @@ int mingw_open (const char *filename, int oflags, ...)
 
 	fd = open_fn(wfilename, oflags, mode);
 
+	/*
+	 * Internally, `_wopen()` uses the `CreateFile()` API with CREATE_NEW,
+	 * which may error out with ERROR_ACCESS_DENIED when the file is
+	 * scheduled for deletion via `DeleteFileW()`. The file essentially
+	 * exists, so we map this error to ERROR_ALREADY_EXISTS so that callers
+	 * don't have to special-case this.
+	 *
+	 * This fixes issues for example with the lockfile interface when one
+	 * process has a lock that it is about to commit or release while
+	 * another process wants to acquire it.
+	 */
+	if (fd < 0 && create && GetLastError() == ERROR_ACCESS_DENIED)
+		errno = EEXIST;
 	if (fd < 0 && (oflags & O_ACCMODE) != O_RDONLY && errno == EACCES) {
 		DWORD attrs = GetFileAttributesW(wfilename);
 		if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY))
