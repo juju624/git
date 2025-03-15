@@ -551,4 +551,71 @@ test_expect_success 'reflog with invalid object ID can be listed' '
 	)
 '
 
+test_expect_success 'reflog drop non-existent ref' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_must_fail git reflog exists refs/heads/non-existent &&
+		test_must_fail git reflog drop refs/heads/non-existent 2>stderr &&
+		test_grep "error: refs/heads/non-existent points nowhere!" stderr
+	)
+'
+
+test_expect_success 'reflog drop' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_commit A &&
+		test_commit_bulk --ref=refs/heads/branch 1 &&
+		git reflog exists refs/heads/main &&
+		git reflog exists refs/heads/branch &&
+		git reflog drop refs/heads/main &&
+		test_must_fail git reflog exists refs/heads/main &&
+		git reflog exists refs/heads/branch
+	)
+'
+
+test_expect_success 'reflog drop multiple references' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_commit A &&
+		test_commit_bulk --ref=refs/heads/branch 1 &&
+		git reflog exists refs/heads/main &&
+		git reflog exists refs/heads/branch &&
+		git reflog drop refs/heads/main refs/heads/branch &&
+		test_must_fail git reflog exists refs/heads/main &&
+		test_must_fail git reflog exists refs/heads/branch
+	)
+'
+
+test_expect_success 'reflog drop --all' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_commit A &&
+		test_commit_bulk --ref=refs/heads/branch 1 &&
+		git reflog exists refs/heads/main &&
+		git reflog exists refs/heads/branch &&
+		git reflog drop --all &&
+		test_must_fail git reflog exists refs/heads/main &&
+		test_must_fail git reflog exists refs/heads/branch
+	)
+'
+
+test_expect_success 'reflog drop --all with reference' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_commit A &&
+		test_must_fail git reflog drop --all refs/heads/main 2>stderr &&
+		test_grep "fatal: references specified along with --all" stderr
+	)
+'
+
 test_done
