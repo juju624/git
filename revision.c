@@ -59,14 +59,6 @@ implement_shared_commit_slab(revision_sources, char *);
 
 static inline int want_ancestry(const struct rev_info *revs);
 
-void show_object_with_name(FILE *out, struct object *obj, const char *name)
-{
-	fprintf(out, "%s ", oid_to_hex(&obj->oid));
-	for (const char *p = name; *p && *p != '\n'; p++)
-		fputc(*p, out);
-	fputc('\n', out);
-}
-
 static void mark_blob_uninteresting(struct blob *blob)
 {
 	if (!blob)
@@ -2283,10 +2275,10 @@ int handle_revision_arg(const char *arg, struct rev_info *revs, int flags, unsig
 	return ret;
 }
 
-static void read_pathspec_from_stdin(struct strbuf *sb,
-				     struct strvec *prune)
+static void read_pathspec_from_stdin(struct strbuf *sb, struct strvec *prune,
+				     int line_term)
 {
-	while (strbuf_getline(sb, stdin) != EOF)
+	while (strbuf_getdelim_strip_crlf(sb, stdin, line_term) != EOF)
 		strvec_push(prune, sb->buf);
 }
 
@@ -2913,8 +2905,8 @@ static int handle_revision_pseudo_opt(struct rev_info *revs,
 	return 1;
 }
 
-static void read_revisions_from_stdin(struct rev_info *revs,
-				      struct strvec *prune)
+static void read_revisions_from_stdin(struct rev_info *revs, struct strvec *prune,
+				      int line_term)
 {
 	struct strbuf sb;
 	int seen_dashdash = 0;
@@ -2926,7 +2918,7 @@ static void read_revisions_from_stdin(struct rev_info *revs,
 	warn_on_object_refname_ambiguity = 0;
 
 	strbuf_init(&sb, 1000);
-	while (strbuf_getline(&sb, stdin) != EOF) {
+	while (strbuf_getdelim_strip_crlf(&sb, stdin, line_term) != EOF) {
 		if (!sb.len)
 			break;
 
@@ -2954,7 +2946,7 @@ static void read_revisions_from_stdin(struct rev_info *revs,
 			die("bad revision '%s'", sb.buf);
 	}
 	if (seen_dashdash)
-		read_pathspec_from_stdin(&sb, prune);
+		read_pathspec_from_stdin(&sb, prune, line_term);
 
 	strbuf_release(&sb);
 	warn_on_object_refname_ambiguity = save_warning;
@@ -3027,13 +3019,16 @@ int setup_revisions(int argc, const char **argv, struct rev_info *revs, struct s
 			}
 
 			if (!strcmp(arg, "--stdin")) {
+				int term = opt && opt->nul_delim_stdin ? '\0' : '\n';
+
 				if (revs->disable_stdin) {
 					argv[left++] = arg;
 					continue;
 				}
 				if (revs->read_from_stdin++)
 					die("--stdin given twice?");
-				read_revisions_from_stdin(revs, &prune_data);
+				read_revisions_from_stdin(revs, &prune_data,
+							  term);
 				continue;
 			}
 

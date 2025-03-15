@@ -439,7 +439,8 @@ struct setup_revision_opt {
 	void (*tweak)(struct rev_info *);
 	unsigned int	assume_dashdash:1,
 			allow_exclude_promisor_objects:1,
-			free_removed_argv_elements:1;
+			free_removed_argv_elements:1,
+			nul_delim_stdin:1;
 	unsigned revarg_opt;
 };
 int setup_revisions(int argc, const char **argv, struct rev_info *revs,
@@ -488,8 +489,6 @@ void put_revision_mark(const struct rev_info *revs,
 void mark_parents_uninteresting(struct rev_info *revs, struct commit *commit);
 void mark_tree_uninteresting(struct repository *r, struct tree *tree);
 void mark_trees_uninteresting_sparse(struct repository *r, struct oidset *trees);
-
-void show_object_with_name(FILE *, struct object *, const char *);
 
 /**
  * Helpers to check if a reference should be excluded.
